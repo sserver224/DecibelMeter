@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os, errno
 import pyaudio
 from scipy.signal import lfilter
