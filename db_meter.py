@@ -15,62 +15,80 @@ def get_resource_path(relative_path):
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
-root=Tk()
-root.title('Decibel Meter v1.0 (c) sserver')
-root.grid()
-root.resizable(False, False)
+win=Tk()
+win.title('Decibel Meter v1.0 (c) sserver')
+win.grid()
+win.resizable(False, False)
+tabControl = Notebook(win)
+root=Frame(tabControl)
+sub=Frame(tabControl)
+tabControl.add(root, text ='Meter')
+measure=False
+tabControl.add(sub, text ='Dosimeter')
+tabControl.pack(expand = 1, fill ="both")
 gaugedb=SevenSegmentDigits(root, digits=3, digit_color='#00ff00', background='black')
 gaugedb.grid(column=1, row=1)
+dosidb=SevenSegmentDigits(sub, digits=3, digit_color='#00ff00', background='black')
+dosidb.grid(column=1, row=2)
+Hovertip(gaugedb,"Current dBA level")
 led0 = Led(root, size=20)
 led0.grid(column=2, row=13)
 led0.to_green(on=False)
-Hovertip(led0,'10 dB\nAll is OK')
+Hovertip(led0,'10 dB\nAll is OK\nEquivalent to rustling leaves in the distance')
 led1 = Led(root, size=20)
 led1.grid(column=2, row=12)
 led1.to_green(on=False)
-Hovertip(led1,'20 dB\nAll is OK')
+Hovertip(led1,'20 dB\nAll is OK\nEquivalent to a background in a movie studio')
 led2 = Led(root, size=20)
 led2.grid(column=2, row=11)
 led2.to_green(on=False)
-Hovertip(led2,'30 dB\nAll is OK')
+Hovertip(led2,'30 dB\nAll is OK\nEquivalent to a quiet bedroom')
 led3 = Led(root, size=20)
 led3.grid(column=2, row=10)
 led3.to_green(on=False)
-Hovertip(led3,'40 dB\nAll is OK')
+Hovertip(led3,'40 dB\nAll is OK\nEquivalent to a whisper')
 led4 = Led(root, size=20)
 led4.grid(column=2, row=9)
 led4.to_green(on=False)
-Hovertip(led4,'50 dB\nAll is OK')
+Hovertip(led4,'50 dB\nAll is OK\nEquivalent to a quiet home')
 led5 = Led(root, size=20)
 led5.grid(column=2, row=8)
 led5.to_green(on=False)
-Hovertip(led5,'60 dB\nAll is OK')
+Hovertip(led5,'60 dB\nAll is OK\nEquivalent to a quiet street')
 led6 = Led(root, size=20)
 led6.grid(column=2, row=7)
 led6.to_green(on=False)
-Hovertip(led6,'70 dB\nAll is OK')
+Hovertip(led6,'70 dB\nAll is OK\nEquivalent to a normal conversation')
 led7 = Led(root, size=20)
 led7.grid(column=2, row=6)
 led7.to_yellow(on=False)
-Hovertip(led7,'80 dB\nA little loud, may cause hearing damage in sensitive people.')
+Hovertip(led7,'80 dB\nA little loud, may cause hearing damage in sensitive people.\nEquivalent to loud singing')
 led8 = Led(root, size=20)
 led8.grid(column=2, row=5)
 led8.to_yellow(on=False)
-Hovertip(led8,'90 dB\nLoud; repeated and/or long term exposure to this level may damage hearing.')
+Hovertip(led8,'90 dB\nLoud; repeated and/or long term exposure at this level may damage hearing.\nEquivalent to a motorcycle')
 led9 = Led(root, size=20)
 led9.grid(column=2, row=4)
 led9.to_red(on=False)
-Hovertip(led9,'100 dB\nDangerous, even short exposure to this level can damage hearing.')
+Hovertip(led9,'100 dB\nCritically loud, even short exposure to this level can damage hearing.\nEquivalent to a subway')
 led10 = Led(root, size=20)
 led10.grid(column=2, row=3)
 led10.to_red(on=False)
-Hovertip(led10,'110 dB\nDangerous, even short exposure to this level can damage hearing.')
+Hovertip(led10,'110 dB\nDangerous, even short exposure to this level can damage hearing.\nEquivalent to a helicopter overheaad')
 led11 = Led(root, size=20)
 led11.grid(column=2, row=2)
 led11.to_red(on=False)
-root.iconbitmap(get_resource_path('snd.ico'))
-Hovertip(led11,"120 dB\nDangerous, even short exposure to this level can damage hearing.\nYou might feel pain at this level.")
+win.iconbitmap(get_resource_path('snd.ico'))
+Hovertip(led11,"120 dB\nDangerous, even short exposure to this level can damage hearing.\nYou might feel pain at this level.\nEquivalent to a rock concert")
 Label(root, text='120').grid(column=1, row=2)
+Label(sub, text='Instantaneous dBA level').grid(column=1, row=1)
+Label(sub, text='Dosimeter is not enabled').grid(column=1, row=3)
+Label(root, text='-').grid(column=1, row=3)
+Label(root, text='-').grid(column=1, row=5)
+Label(root, text='-').grid(column=1, row=7)
+Label(root, text='-').grid(column=1, row=9)
+Label(root, text='-').grid(column=1, row=11)
+Label(root, text='-').grid(column=1, row=13)
 Label(root, text='100').grid(column=1, row=4)
 Label(root, text='Danger').grid(column=3, row=4)
 Label(root, text='80').grid(column=1, row=6)
@@ -84,6 +102,21 @@ Label(root, text='dBA').grid(column=1, row=0)
 Label(root, text='dB Offset').grid(column=2, row=0)
 maxdb_display=SevenSegmentDigits(root, digits=3, digit_color='#00ff00', background='black')
 maxdb_display.grid(column=3, row=1)
+dos_enabled=False
+82dbtime=0
+85dbtime=0
+87dbtime=0
+91dbtime=0
+94dbtime=0
+97dbtime=0
+100dbtime=0
+103dbtime=0
+106dbtime=0
+109dbtime=0
+112dbtime=0
+115dbtime=0
+120dbtime=0
+Hovertip(maxdb_display,"Max dBA level since program start")
 CHUNKS = [4096, 9600]
 CHUNK = CHUNKS[1]
 FORMAT = pyaudio.paInt16
@@ -94,11 +127,12 @@ offset=StringVar()
 offset.set('0')
 spinbox=Spinbox(root, from_=-20, to=20, textvariable=offset, state='readonly', width=5)
 spinbox.grid(column=2, row=1)
+Hovertip(spinbox,"dB offset (Calibration)\nUse this if the meter is not accurate.\nUse a reliable reference meter (such as a dedicated SPL meter).")
 appclosed=False
 from scipy.signal import bilinear
 def close():
     global appclosed
-    root.destroy()
+    win.destroy()
     appclosed=True
     stream.stop_stream()
     stream.close()
@@ -129,6 +163,7 @@ max_decibel=0
 def listen(old=0, error_count=0, min_decibel=100):
     global appclosed
     global max_decibel
+    global measure
     if not appclosed:
         try:
             try:
@@ -145,6 +180,7 @@ def listen(old=0, error_count=0, min_decibel=100):
                     new_decibel=0
                 old = new_decibel
                 gaugedb.set_value(str(int(float('{:.2f}'.format(new_decibel)))))
+                dosidb.set_value(str(int(float('{:.2f}'.format(new_decibel)))))
                 if new_decibel>max_decibel:
                     max_decibel=new_decibel
                 maxdb_display.set_value(str(int(float(str(max_decibel)))))
@@ -154,10 +190,19 @@ def listen(old=0, error_count=0, min_decibel=100):
                     exec("led"+str(i)+".to_yellow(on=(new_decibel>="+str(10*(i+1))+"))")
                 for i in range(9, 12):
                     exec("led"+str(i)+".to_red(on=(new_decibel>="+str(10*(i+1))+"))")
+                if dosi_enabled:
+                    if var >= threshold_db and not measure:
+                        start = time()
+                        measure=True
+                        time_display=0
+                    elif measure:
+                        time_display=time.time()-start
+                    if var <= threshold_db:
+                        
             root.after(50, listen)
         except TclError:
             pass
-root.protocol('WM_DELETE_WINDOW', close)
+win.protocol('WM_DELETE_WINDOW', close)
 if __name__ == '__main__':
     listen()
     root.mainloop()
