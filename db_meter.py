@@ -6,8 +6,17 @@ from tkinter import *
 from threading import Thread
 from tkinter.ttk import *
 from tk_tools import *
+import time
 from tkinter import messagebox
+import sys
 from idlelib.tooltip import Hovertip
+try:
+    from winreg import *
+except:
+    reg_present=False
+    messagebox.askokcancel('Limited Features', "Registry not present. Dosimeter disabled. OK to continue, Cancel to quit.", icon='warning')
+else:
+    reg_present=True
 def get_resource_path(relative_path):
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
@@ -15,15 +24,30 @@ def get_resource_path(relative_path):
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
+def toggle_dosi():
+    global dosi_enabled
+    dosi_enabled=enable_dosi.instate(['selected'])
 win=Tk()
 win.title('Decibel Meter v1.0 (c) sserver')
 win.grid()
 win.resizable(False, False)
+if reg_present:
+    CreateKeyEx(OpenKey(HKEY_CURRENT_USER, 'Software', reserved=0, access=KEY_ALL_ACCESS), 'sserver\Decibel Meter', reserved=0)
+    try:
+        dosi_enabled=bool(QueryValueEx(OpenKey(OpenKey(OpenKey(HKEY_CURRENT_USER, 'Software', reserved=0, access=KEY_ALL_ACCESS), 'sserver', reserved=0, access=KEY_ALL_ACCESS), 'Decibel Meter', reserved=0, access=KEY_ALL_ACCESS), 'DosimeterEnabled')[0])
+    except OSError:
+        SetValueEx(OpenKey(OpenKey(OpenKey(HKEY_CURRENT_USER, 'Software', reserved=0, access=KEY_ALL_ACCESS), 'sserver', reserved=0, access=KEY_ALL_ACCESS), 'Decibel Meter', reserved=0, access=KEY_ALL_ACCESS), 'DosimeterEnabled', 0, REG_DWORD, 0)
+        dosi_enabled=False
+        messagebox.showwarning('Registry Error', 'Error reading settings. Resetting to default...')
+else:
+    dosi_enabled=False
+dosi_enabled_first=dosi_enabled
 tabControl = Notebook(win)
 root=Frame(tabControl)
 sub=Frame(tabControl)
 tabControl.add(root, text ='Meter')
 measure=False
+start=time.time()
 tabControl.add(sub, text ='Dosimeter')
 tabControl.pack(expand = 1, fill ="both")
 gaugedb=SevenSegmentDigits(root, digits=3, digit_color='#00ff00', background='black')
@@ -82,7 +106,42 @@ win.iconbitmap(get_resource_path('snd.ico'))
 Hovertip(led11,"120 dB\nDangerous, even short exposure to this level can damage hearing.\nYou might feel pain at this level.\nEquivalent to a rock concert")
 Label(root, text='120').grid(column=1, row=2)
 Label(sub, text='Instantaneous dBA level').grid(column=1, row=1)
-Label(sub, text='Dosimeter is coming soon').grid(column=1, row=3)
+style=Style(win)
+style.configure("1.Horizontal.TProgressbar", background='green')
+style.configure("2.Horizontal.TProgressbar", background='yellow')
+style.configure("3.Horizontal.TProgressbar", background='red')
+style = Style(root)
+style.layout('text.Horizontal.TProgressbar',
+             [('Horizontal.Progressbar.trough',
+               {'children': [('Horizontal.Progressbar.pbar',
+                              {'side': 'left', 'sticky': 'ns'})],
+                'sticky': 'nswe'}),
+              ('Horizontal.Progressbar.label', {'sticky': ''})])
+style.configure('text.Horizontal.TProgressbar', text='0 %')
+db_levels=[82, 85, 88, 91, 94, 97, 100, 103, 106, 109, 112, 115, 120]
+niosh_limits=[57600, 28800, 14400, 7200, 3600, 1800, 900, 450, 225, 120, 60, 30, 15]
+db_levels.reverse()
+niosh_limits.reverse()
+enable_dosi=Checkbutton(sub, text='Enable Dosimeter (restart app to apply)', command=toggle_dosi)
+enable_dosi.grid(column=1, row=3)
+enable_dosi.state(['!alternate'])
+if not reg_present:
+    enable_dosi.config(state=DISABLED)
+    enable_dosi.state(['!alternate'])
+if dosi_enabled:
+    enable_dosi.state(['selected'])
+    Label(sub, text='Dose:', width=40).grid(column=1, row=4)
+    dosebar=Progressbar(sub, maximum=100, mode='determinate', length=200, style='text.Horizontal.TProgressbar')
+    dosebar.grid(column=2, row=4)
+    pdose=Label(sub, text='Projected dose: 0 sec', width=40)
+    for i in range(len(db_levels)):
+        db_level=db_levels[i]
+        exec("label_"+str(db_level)+"=Label(sub, width=40, text='"+str(db_level)+"dBA: 0/"+str(niosh_limits[i])+" sec')")
+        exec("label_"+str(db_level)+".grid(column=1, row="+str(i+5)+")")
+        exec("bar_"+str(db_level)+'=Progressbar(sub, length=200, style="1.Horizontal.TProgressbar", mode="determinate")')
+        exec("bar_"+str(db_level)+'.grid(column=2, row='+str(i+5)+')')
+else:
+    Label(sub, text='Dosimeter is not enabled', width=60).grid(column=1, row=4)
 Label(root, text='-').grid(column=1, row=3)
 Label(root, text='-').grid(column=1, row=5)
 Label(root, text='-').grid(column=1, row=7)
@@ -102,20 +161,7 @@ Label(root, text='dBA').grid(column=1, row=0)
 Label(root, text='dB Offset').grid(column=2, row=0)
 maxdb_display=SevenSegmentDigits(root, digits=3, digit_color='#00ff00', background='black')
 maxdb_display.grid(column=3, row=1)
-dos_enabled=False
-82dbtime=0
-85dbtime=0
-87dbtime=0
-91dbtime=0
-94dbtime=0
-97dbtime=0
-100dbtime=0
-103dbtime=0
-106dbtime=0
-109dbtime=0
-112dbtime=0
-115dbtime=0
-120dbtime=0
+dosimeter_times={'82dB':0, '85dB':0, '88dB':0, '91dB':0, '94dB':0, '97dB':0, '100dB':0, '103dB':0, '106dB':0, '109dB':0, '112dB':0, '115dB':0, '120dB':0}
 Hovertip(maxdb_display,"Max dBA level since program start")
 CHUNKS = [4096, 9600]
 CHUNK = CHUNKS[1]
@@ -130,9 +176,42 @@ spinbox.grid(column=2, row=1)
 Hovertip(spinbox,"dB offset (Calibration)\nUse this if the meter is not accurate.\nUse a reliable reference meter (such as a dedicated SPL meter).")
 appclosed=False
 from scipy.signal import bilinear
+db=0
+def timer_dosi():
+    if db>=82 and db<85:
+        dosimeter_times['82dB']+=1
+    if db>=85 and db<88:
+        dosimeter_times['85dB']+=1
+    if db>=88 and db<91:
+        dosimeter_times['88dB']+=1
+    if db>=91 and db<94:
+        dosimeter_times['91dB']+=1
+    if db>=94 and db<97:
+        dosimeter_times['94dB']+=1
+    if db>=97 and db<100:
+        dosimeter_times['97dB']+=1
+    if db>=100 and db<103:
+        dosimeter_times['100dB']+=1
+    if db>=103 and db<106:
+        dosimeter_times['103dB']+=1
+    if db>=106 and db<109:
+        dosimeter_times['106dB']+=1
+    if db>=109 and db<112:
+        dosimeter_times['109dB']+=1
+    if db>=112 and db<115:
+        dosimeter_times['112dB']+=1
+    if db>=115 and db<120:
+        dosimeter_times['115dB']+=1
+    if db>=120:
+        dosimeter_times['120dB']+=1
+    win.after(1000, timer_dosi)
 def close():
     global appclosed
     win.destroy()
+    if dosi_enabled:
+        SetValueEx(OpenKey(OpenKey(OpenKey(HKEY_CURRENT_USER, 'Software', reserved=0, access=KEY_ALL_ACCESS), 'sserver', reserved=0, access=KEY_ALL_ACCESS), 'Decibel Meter', reserved=0, access=KEY_ALL_ACCESS), 'DosimeterEnabled', 0, REG_DWORD, 1)
+    else:
+        SetValueEx(OpenKey(OpenKey(OpenKey(HKEY_CURRENT_USER, 'Software', reserved=0, access=KEY_ALL_ACCESS), 'sserver', reserved=0, access=KEY_ALL_ACCESS), 'Decibel Meter', reserved=0, access=KEY_ALL_ACCESS), 'DosimeterEnabled', 0, REG_DWORD, 0)
     appclosed=True
     stream.stop_stream()
     stream.close()
@@ -160,10 +239,18 @@ stream = pa.open(format = FORMAT,
                 input = True,
                 frames_per_buffer = CHUNK)
 max_decibel=0
+def returnSum(myDict):
+    mylist = []
+    for i in myDict:
+        mylist.append(myDict[i])
+    final = sum(mylist)
+    return final
 def listen(old=0, error_count=0, min_decibel=100):
     global appclosed
     global max_decibel
     global measure
+    global db
+    global start
     if not appclosed:
         try:
             try:
@@ -173,12 +260,13 @@ def listen(old=0, error_count=0, min_decibel=100):
                     error_count += 1
                     messagebox.showerror("Error, ", " (%d) Error recording: %s" % (error_count, e))
             else:
-                decoded_block = numpy.fromstring(block, numpy.int16)
+                decoded_block = numpy.frombuffer(block, numpy.int16)
                 y = lfilter(NUMERATOR, DENOMINATOR, decoded_block)
                 new_decibel = 20*numpy.log10(rms_flat(y))+int(offset.get())
                 if new_decibel<0:
                     new_decibel=0
                 old = new_decibel
+                db=new_decibel
                 gaugedb.set_value(str(int(float('{:.2f}'.format(new_decibel)))))
                 dosidb.set_value(str(int(float('{:.2f}'.format(new_decibel)))))
                 if new_decibel>max_decibel:
@@ -190,19 +278,21 @@ def listen(old=0, error_count=0, min_decibel=100):
                     exec("led"+str(i)+".to_yellow(on=(new_decibel>="+str(10*(i+1))+"))")
                 for i in range(9, 12):
                     exec("led"+str(i)+".to_red(on=(new_decibel>="+str(10*(i+1))+"))")
-                if dosi_enabled:
-                    if var >= threshold_db and not measure:
-                        start = time()
-                        measure=True
-                        time_display=0
-                    elif measure:
-                        time_display=time.time()-start
-                    if var <= threshold_db:
-                        
-            root.after(50, listen)
+            if dosi_enabled_first:
+                percent=(returnSum(dosimeter_times)/(time.time()-start))*100
+                dosebar['value']=float(percent)
+                style.configure('text.Horizontal.TProgressbar',text='{:g} %'.format(percent))
+                pdose.config(text='Projected dose: '+str(int((returnSum(dosimeter_times)*8)/(time.time()-start)))+' sec')
+                for i in range(len(db_levels)):
+                    db_level=db_levels[i]
+                    exec("label_"+str(db_level)+".config(text='"+str(db_level)+"dBA: "+str(int(dosimeter_times[str(db_level)+'dB']))+'/'+str(niosh_limits[i])+" sec')")
+                    exec("bar_"+str(db_level)+"['value']="+str(dosimeter_times[str(db_level)+'dB']/niosh_limits[i]))
+            win.after(50, listen)
         except TclError:
             pass
 win.protocol('WM_DELETE_WINDOW', close)
 if __name__ == '__main__':
+    if dosi_enabled:
+        timer_dosi()
     listen()
     root.mainloop()
