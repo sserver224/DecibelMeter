@@ -7,8 +7,6 @@ from threading import Thread
 from tk_tools import *
 from customtkinter import *
 import time
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 from tkinter import messagebox
 import sys
 from idlelib.tooltip import Hovertip
